@@ -1,5 +1,7 @@
 import { component$, Slot } from "@builder.io/qwik";
 import type { RequestHandler } from "@builder.io/qwik-city";
+import { components } from "~/mdx/components";
+import { MDXProvider } from "~/mdx/provider";
 
 export const onGet: RequestHandler = async ({ cacheControl }) => {
   // Control caching for this request for best performance and to reduce hosting costs:
@@ -13,5 +15,13 @@ export const onGet: RequestHandler = async ({ cacheControl }) => {
 };
 
 export default component$(() => {
-  return <Slot />;
+  return (
+    <MDXProvider components={components}>
+      <div class="flex h-auto">
+        <main class="mx-auto mb-20 max-w-screen-lg flex-[2] px-12 pb-5 pt-20 xl:px-24">
+          <Slot />
+        </main>
+      </div>
+    </MDXProvider>
+  );
 });
