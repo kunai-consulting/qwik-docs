@@ -19,6 +19,7 @@ export default component$(() => {
     <MDXProvider components={components}>
       <div class="flex h-auto">
         <main class="mx-auto mb-20 max-w-screen-lg flex-[2] px-12 pb-5 pt-20 xl:px-24">
+          
           <Slot />
         </main>
       </div>
