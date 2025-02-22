@@ -1,113 +1,105 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, type PropsOf, useStyles$ } from "@builder.io/qwik";
 import { Accordion } from "@qwik-ui/headless";
 import {
 	buildNavTree,
 	checkHasOverviewPage,
-	type Doc,
+	// type Doc,
 	type SidebarNode,
 } from "./utils";
 
-export interface SidebarProps {
-	docs: Doc[];
+import styles from "./accordion.css?inline";
+import { cn } from "~/utils/cn";
+
+type SidebarProps = {
 	defaultOrder: string[];
-}
+} & PropsOf<"aside">;
 
-export const Sidebar = component$<SidebarProps>(({ docs, defaultOrder }) => {
-	const allDocs = docs || [];
-	const homeDoc = allDocs.find((doc) => doc.id === "home");
+const docsWithPaths = import.meta.glob("/docs/**/*.mdx", { eager: true });
+const docs = Object.entries(docsWithPaths).map(
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	([path, module]: [string, any]) => ({
+		path,
+		frontmatter: module.frontmatter,
+	}),
+);
 
-	const order: string[] = homeDoc?.data?.sidebarOrder || defaultOrder;
+export const Sidebar = component$<SidebarProps>(
+	({ defaultOrder, ...props }) => {
+		const allDocs = docs;
+		const navTree = buildNavTree(allDocs, defaultOrder);
 
-	const navTree = buildNavTree(
-		allDocs.map((doc) => ({
-			...doc,
-			id: doc.filePath.replace(/^docs\/|\.mdx$/g, ""),
-		})),
-		order,
-	);
-	const currentDoc = allDocs.find(
-		(doc) => doc.id === window.location.pathname.split("/").pop(),
-	);
+		useStyles$(styles);
 
-	const renderSidebarNode = (node: SidebarNode) => {
-		const isNested = node.id.includes("/");
+		const renderSidebarNode = (node: SidebarNode) => {
+			const isNested = node.id.includes("/");
 
-		if (!node.children.length) {
-			const isActive = window.location.pathname.split("/").pop() === node.id;
-			return (
-				<Accordion.Item
-					value={node.id}
-					class={isNested ? "" : "border-b border-digital-gray-90"}
-				>
-					<a
-						href={`/docs/${node.id}`}
-						class="flex w-full items-center justify-between gap-2 text-lg font-medium px-2 group text-left py-3 transition-colors duration-300"
-					>
-						<span
-							class={`uppercase ${isNested ? "text-xs" : "text-sm"} leading-[150%] tracking-[1.92px] font-sans-semi-bold ${isActive ? "text-light-blue-20" : ""}`}
+			if (!node.children.length) {
+				const isActive = false;
+				return (
+					<Accordion.Item class="collapsible" value={node.id}>
+						<a
+							href={`/docs/${node.id}`}
+							class="flex w-full items-center justify-between gap-2 px-2 py-3 text-left transition-colors duration-300 hover:bg-neutral-100"
 						>
-							{node.title}
-						</span>
-					</a>
-				</Accordion.Item>
-			);
-		}
+							<span
+								class={`${isNested ? "text-xs" : "text-sm"} font-medium tracking-wide ${
+									isActive ? "text-primary" : "text-neutral-800"
+								}`}
+							>
+								{node.title}
+							</span>
+						</a>
+					</Accordion.Item>
+				);
+			}
 
-		const currentPath = window.location.pathname.split("/").pop() || "";
-		const isCurrentSection = currentPath.startsWith(node.id);
-		const isExactMatch = currentPath === node.id;
-		const hasOverviewPage = checkHasOverviewPage(node, allDocs);
+			const hasOverviewPage = checkHasOverviewPage(node, allDocs);
 
-		const trigger = (
-			<Accordion.Trigger
-				class="flex w-full items-center justify-between gap-2 text-lg font-medium px-2 group text-left py-3 group transition-colors duration-300 cursor-pointer"
-				onClick$={() => {
-					if (!hasOverviewPage) return;
-					const targetRoute = `/docs/${node.id}`;
-					if (window.location.pathname.split("/").pop() !== node.id) {
+			const trigger = (
+				<Accordion.Trigger
+					class="collapsible-trigger"
+					onClick$={() => {
+						if (!hasOverviewPage) return;
+						const targetRoute = `/docs/${node.id}`;
 						window.location.href = targetRoute;
-					}
-				}}
-			>
-				<span
-					class={`uppercase ${isNested ? "text-xs" : "text-sm"} leading-[150%] tracking-[1.92px] font-sans-semi-bold group-data-[open]:text-[#9FDBEF] ${isExactMatch ? "text-light-blue-20" : ""}`}
+					}}
 				>
-					{node.title}
-				</span>
-				<ChevronRight class="transform transition-transform rotate-0 group-data-[open]:rotate-[90deg] min-w-[18px] group-data-[open]:text-[#9FDBEF]" />
-			</Accordion.Trigger>
-		);
+					<span
+						class={`${
+							isNested ? "text-xs" : "text-sm"
+						} font-medium tracking-wide text-neutral-800 group-data-[open]:text-primary`}
+					>
+						{node.title}
+					</span>
+					<ChevronRight class="min-w-[18px] transform rotate-0 transition-transform group-data-[open]:rotate-[90deg] group-data-[open]:text-primary" />
+				</Accordion.Trigger>
+			);
+
+			return (
+				<Accordion.Root collapsible={false} value={undefined}>
+					<Accordion.Item class="collapsible" value={node.id}>
+						{trigger}
+						<Accordion.Content class="collapsible-content collapsible-content-outline">
+							<div class="pl-4">
+								{node.children.map((child: SidebarNode) =>
+									renderSidebarNode(child),
+								)}
+							</div>
+						</Accordion.Content>
+					</Accordion.Item>
+				</Accordion.Root>
+			);
+		};
 
 		return (
-			<Accordion.Root
-				collapsible={false}
-				value={isCurrentSection ? node.id : undefined}
-			>
-				<Accordion.Item
-					value={node.id}
-					class={isNested ? "" : "border-b border-digital-gray-90"}
-				>
-					{trigger}
-					<Accordion.Content>
-						<div class="pl-4">
-							{node.children.map((child: SidebarNode) =>
-								renderSidebarNode(child),
-							)}
-						</div>
-					</Accordion.Content>
-				</Accordion.Item>
-			</Accordion.Root>
+			<aside {...props} class={cn("sticky top-0 h-[100vh]", props.class)}>
+				<Accordion.Root>
+					{navTree.map((node: SidebarNode) => renderSidebarNode(node))}
+				</Accordion.Root>
+			</aside>
 		);
-	};
-
-	return (
-		<aside class="sticky top-[86px] hidden lg:flex flex-col col-span-1 h-[calc(100vh-4rem)] text-digital-gray-10 max-w-[450px] border-r overflow-y-auto border-digital-gray-50">
-			<Accordion.Root class="flex flex-col p-2" value={currentDoc?.id}>
-				{navTree.map((node: SidebarNode) => renderSidebarNode(node))}
-			</Accordion.Root>
-		</aside>
-	);
-});
+	},
+);
 
 const ChevronRight = (props: { class?: string }) => (
 	<svg

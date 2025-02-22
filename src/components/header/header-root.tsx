@@ -1,18 +1,20 @@
 import {
 	component$,
+	type PropsOf,
 	Slot,
 	useContextProvider,
 	useSignal,
 } from "@builder.io/qwik";
 import { HeaderContextId } from "./header-context";
+import { cn } from "~/utils/cn";
 
 type HeaderProps = {
 	isFullWidth: boolean;
 	pathname: string;
-};
+} & PropsOf<"header">;
 
 export const HeaderRoot = component$(
-	({ isFullWidth, pathname }: HeaderProps) => {
+	({ isFullWidth, pathname, ...props }: HeaderProps) => {
 		const pathnameSig = useSignal(pathname);
 		const context = {
 			pathnameSig,
@@ -20,7 +22,13 @@ export const HeaderRoot = component$(
 
 		useContextProvider(HeaderContextId, context);
 		return (
-			<header class="flex px-6 lg:px-10 justify-center sticky h-[86px] top-0 bg-core-blue-70 z-50 border-b border-digital-gray-50">
+			<header
+				{...props}
+				class={cn(
+					"flex px-6 lg:px-10 justify-center sticky h-[86px] top-0 z-50 border-b",
+					props.class ?? "",
+				)}
+			>
 				<div
 					class={`flex justify-between w-full items-center ${!isFullWidth ? "max-w-screen-lg" : ""}`}
 				>
